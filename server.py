@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
+import os
 import socket
 import time
 import threading
@@ -37,7 +38,7 @@ class Send(threading.Thread):
             time.sleep(5)
 
 
-HOST = "219.216.87.48"
+HOST = out = os.popen("ifconfig | grep 'inet addr:' | grep -v '127.0.0.1' | cut -d: -f2 | awk '{print $1}' | head -1").read()
 PORT = 9527
 soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 soc.bind((HOST, PORT))
