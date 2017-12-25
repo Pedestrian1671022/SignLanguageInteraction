@@ -38,7 +38,7 @@ class Send(threading.Thread):
             time.sleep(5)
 
 
-HOST = os.popen("ifconfig | grep 'inet addr:' | grep -v '127.0.0.1' | cut -d: -f2 | awk '{print $1}' | head -1").read()
+HOST = os.popen("ifconfig | grep 'inet addr:' | grep -v '127.0.0.1' | cut -d: -f2 | cut -d' ' -f1").read()
 print HOST
 PORT = 9527
 soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
