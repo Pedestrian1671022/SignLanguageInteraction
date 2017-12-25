@@ -48,12 +48,13 @@ public class MainActivity extends AppCompatActivity {
     private Socket socket;
     private EditText editText;
     private Button connectButton;
-    private Button disconnectButton;
+//    private Button disconnectButton;
     private TextView iat;
     private TextView tts;
     private Button start;
     private int ret = 0;
     private Toast mToast;
+    private Boolean flag = true;
 
     private SpeechRecognizer mIat;
     private SpeechSynthesizer mTts;
@@ -67,7 +68,7 @@ public class MainActivity extends AppCompatActivity {
 
         editText = (EditText) findViewById(R.id.ipAddress);
         connectButton = (Button) findViewById(R.id.connect);
-        disconnectButton = (Button) findViewById(R.id.disconnect);
+//        disconnectButton = (Button) findViewById(R.id.disconnect);
         iat = (TextView) findViewById(R.id.iat);
         tts = (TextView) findViewById(R.id.tts);
         start = (Button) findViewById(R.id.start);
@@ -93,59 +94,70 @@ public class MainActivity extends AppCompatActivity {
                         mToast.show();
                     }
                 }
+                else if(msg.what == 2){
+                    mToast.setText("Socket链接出现问题，原因可能是：Invalid Ip Address");
+                    mToast.show();
+                }
+                else{
+                    connectButton.setText("disconnect");
+                    mToast.setText("Socket已经链接");
+                    mToast.show();
+                }
             }
         };
 
         connectButton.setOnClickListener(new Button.OnClickListener(){
             @Override
             public void onClick(View view) {
-                new Thread(){
-                    @Override
-                    public void run() {
-                        try {
-                            socket = new Socket(editText.getText().toString(), 9527);
-                            new Thread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    try{
-                                        BufferedReader recv = new BufferedReader(new InputStreamReader(socket.getInputStream(),"utf-8"));
-                                        String line;
-                                        while(socket.isConnected()){
-                                            if((line = recv.readLine())!=null){
-                                                Message message = new Message();
-                                                message.what = 1;
-                                                message.obj = line;
-                                                handler.sendMessage(message);
+                if (flag) {
+                    new Thread() {
+                        @Override
+                        public void run() {
+                            try {
+                                socket = new Socket(editText.getText().toString(), 9527);
+                                new Thread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        try {
+                                            BufferedReader recv = new BufferedReader(new InputStreamReader(socket.getInputStream(), "utf-8"));
+                                            String line;
+                                            while (socket.isConnected()) {
+                                                if ((line = recv.readLine()) != null) {
+                                                    Message message = new Message();
+                                                    message.what = 1;
+                                                    message.obj = line;
+                                                    handler.sendMessage(message);
+                                                }
                                             }
+                                        } catch (IOException e) {
                                         }
-                                    }catch (IOException e){
-                                        e.printStackTrace();
                                     }
-                                }
-                            }).start();
-                            mToast.setText("Socket已经链接");
-                            mToast.show();
-                        } catch (IOException e) {
-                            mToast.setText("Socket链接出现问题，原因可能是：Invalid Ip Address");
-                            mToast.show();
+                                }).start();
+                                flag = false;
+                                Message message = new Message();
+                                message.what = 3;
+                                handler.sendMessage(message);
+                            } catch (IOException e) {
+                                Message message = new Message();
+                                message.what = 2;
+                                handler.sendMessage(message);
+                            }
                         }
+                    }.start();
+                }
+                else{
+                    try {
+                        iat.setText(null);
+                        tts.setText(null);
+                        socket.close();
+                        flag = true;
+                        connectButton.setText("connect");
+                        mToast.setText("Socket已经断开");
+                        mToast.show();
+                    } catch (IOException e) {
+                        mToast.setText("socket关闭出现问题！");
+                        mToast.show();
                     }
-                }.start();
-            }
-        });
-
-        disconnectButton.setOnClickListener(new Button.OnClickListener(){
-            @Override
-            public void onClick(View view){
-                try {
-                    iat.setText(null);
-                    tts.setText(null);
-                    socket.close();
-                    mToast.setText("Socket已经断开");
-                    mToast.show();
-                } catch (IOException e) {
-                    mToast.setText("socket关闭出现问题！");
-                    mToast.show();
                 }
             }
         });
@@ -164,6 +176,19 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle savedInstanceState){
+        super.onSaveInstanceState(savedInstanceState);
+        savedInstanceState.putString("message", editText.getText().toString());
+    }
+
+    @Override
+    public void onRestoreInstanceState(Bundle savedInstanceState){
+        super.onRestoreInstanceState(savedInstanceState);
+        String message = savedInstanceState.getString("message");
+        editText.setText(message);
     }
 
     private InitListener mInitListener = new InitListener() {
